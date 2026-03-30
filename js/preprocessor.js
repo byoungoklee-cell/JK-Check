@@ -61,8 +61,11 @@ const Preprocessor = (() => {
     }
 
     // 줄 단위로 분리 + 전처리
-    return raw
-      .split(/\r\n|\r|\n|\u000B|\u000C|\u2028|\u2029/)
+    // 모든 형태의 줄바꿈(\r\n, \r, \n 등)을 \n으로 표준화한 뒤 분리
+    const normalized = raw.replace(/\r\n|\r|\u000B|\u000C|\u2028|\u2029/g, '\n');
+    
+    return normalized
+      .split('\n')
       .map(s => {
         const stripped = stripTags(s);
         // 전각→반각 정규화

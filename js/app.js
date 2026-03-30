@@ -269,8 +269,13 @@ const App = (() => {
     const div = document.createElement('div');
     div.innerHTML = result.value;
     const paras = [...div.querySelectorAll('p')]
-      .map(p => p.textContent.trim()).filter(s => s.length > 0);
-    if (paras.length > 1) return paras.join('\n');
+      .map(p => {
+        // <br> 태그를 \n으로 치환 (Shift+Enter 대응)
+        p.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+        return p.textContent.trim();
+      })
+      .filter(s => s.length > 0);
+    if (paras.length > 1 || (paras.length === 1 && paras[0].includes('\n'))) return paras.join('\n');
     // fallback: raw text
     const raw = await mammoth.extractRawText({ arrayBuffer: buf });
     return raw.value.trim();
@@ -279,7 +284,7 @@ const App = (() => {
   // ── 헤더 버튼 ─────────────────────────────────────────────
   function bindHeaderEvents() {
     const btnDl  = document.getElementById('btn-dl');
-    const btnNew = document.getElementById('btn-header-new');
+    const btnNew = document.getElementById('btn-new');
     if (btnDl)  btnDl.addEventListener('click', () => Reviewer.downloadTranslation());
     if (btnNew) btnNew.addEventListener('click', resetAll);
 
