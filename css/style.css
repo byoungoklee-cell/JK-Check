@@ -317,20 +317,9 @@ html, body {
 .status-label-badge.error   { color: var(--status-error-text);   background: var(--status-error-bg);   border-color: var(--status-error-border); }
 
 .cell-text-ko {
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: transparent;
   font-size: 13px; color: var(--text-primary);
-  line-height: 1.8; position: relative;
+  line-height: 1.8;
   font-family: 'Noto Sans KR', 'Inter', sans-serif;
-  min-height: 60px;
-  box-sizing: border-box;
-  transition: border-color 0.12s;
-  cursor: text;
-}
-.cell-text-ko:hover {
-  border-color: #d1d5db;
 }
 
 .cell-edit-icon {
