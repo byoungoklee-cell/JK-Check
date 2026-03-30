@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>일한 번역검토 — JP→KO Translation Review</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <div id="app">
+
+    <!-- ===== 헤더 ===== -->
+    <header class="app-header">
+      <div class="logo-icon">J</div>
+      <div class="logo-text">
+        <h1>일한 번역검토</h1>
+        <div class="subtitle">JP→KO Translation Review</div>
+      </div>
+      <div class="header-actions" id="header-actions" style="display:none;">
+        <div class="header-progress-bar">
+          <div class="header-progress-fill" id="header-progress-fill" style="width:0%"></div>
+        </div>
+        <span class="header-pct" id="header-pct">0%</span>
+        <button class="btn-header-dl" id="btn-dl">⬇ 현재의 번역문 다운로드</button>
+        <button class="btn-header-new" id="btn-new">↩ 새 파일</button>
+      </div>
+    </header>
+
+    <!-- ===== 스텝 바 ===== -->
+    <div class="step-bar" id="step-bar">
+      <!-- JS로 렌더링 -->
+    </div>
+
+    <!-- ===== 업로드 화면 ===== -->
+    <div class="upload-screen" id="screen-upload">
+      <div class="upload-container">
+        <div class="upload-card">
+          <div class="upload-card-title">파일 업로드</div>
+          <div class="upload-card-desc">일본어 원문과 한국어 번역문 .docx 파일을 업로드하세요</div>
+
+          <div class="file-drop-row">
+            <!-- JP -->
+            <div class="file-drop-zone" id="drop-jp" onclick="document.getElementById('input-jp').click()">
+              <input type="file" id="input-jp" accept=".docx" style="display:none">
+              <div class="file-drop-flag">🇯🇵</div>
+              <div class="file-drop-lang">일본어 원문</div>
+              <div id="drop-jp-info" class="file-drop-hint">.docx 클릭하여 업로드</div>
+            </div>
+            <!-- KO -->
+            <div class="file-drop-zone" id="drop-ko" onclick="document.getElementById('input-ko').click()">
+              <input type="file" id="input-ko" accept=".docx" style="display:none">
+              <div class="file-drop-flag">🇰🇷</div>
+              <div class="file-drop-lang">한국어 번역문</div>
+              <div id="drop-ko-info" class="file-drop-hint">.docx 클릭하여 업로드</div>
+            </div>
+          </div>
+
+          <div id="upload-error" class="error-msg" style="display:none;"></div>
+          <div id="upload-debug" class="debug-log" style="display:none;"></div>
+
+          <button class="btn-start disabled" id="btn-start" disabled>
+            두 파일을 모두 업로드해 주세요
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 처리 화면 ===== -->
+    <div class="processing-screen" id="screen-processing" style="display:none;">
+      <div class="processing-card">
+        <div class="spinner"></div>
+        <div class="processing-title">문장 매칭 처리 중</div>
+        <p class="processing-status" id="proc-status">파일을 분석하고 있습니다...</p>
+        <div class="processing-log" id="proc-log"></div>
+        <button class="btn-go-review" id="btn-go-review">검토 시작 →</button>
+      </div>
+    </div>
+
+    <!-- ===== 검토 화면 ===== -->
+    <div id="screen-review" style="display:none; flex:1; overflow:hidden; display:none; flex-direction:column;">
+
+      <!-- 필터 바 -->
+      <div class="filter-bar">
+        <span class="match-info" id="match-info"></span>
+        <div class="filter-spacer"></div>
+        <button class="filter-pill" id="fpill-none" data-filter="none"> <span class="filter-pill-count">0</span>
+          미검토</button>
+        <button class="filter-pill" id="fpill-good" data-filter="good"> <span class="filter-pill-count">0</span> ✅
+          정상</button>
+        <button class="filter-pill" id="fpill-warning" data-filter="warning"><span class="filter-pill-count">0</span> ⚠️
+          주의</button>
+        <button class="filter-pill" id="fpill-error" data-filter="error"> <span class="filter-pill-count">0</span> ❌
+          오류</button>
+        <button class="filter-clear" id="filter-clear" style="display:none;">✕</button>
+      </div>
+
+      <!-- 스크롤 영역 -->
+      <div class="review-scroll">
+        <!-- 컬럼 헤더 -->
+        <div class="review-col-header">
+          <div class="review-col-header-cell">#</div>
+          <div class="review-col-header-cell">원문 (🇯🇵)</div>
+          <div class="review-col-header-cell">번역문 (🇰🇷)</div>
+          <div class="review-col-header-cell sortable" id="sort-header">유사도 ↕</div>
+        </div>
+        <!-- 행 목록 -->
+        <div id="review-list"></div>
+      </div>
+    </div>
+
+  </div><!-- #app -->
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.11.0/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="js/similarity.js"></script>
+  <script src="js/preprocessor.js"></script>
+  <script src="js/matcher.js"></script>
+  <script src="js/fileHandler.js"></script>
+  <script src="js/reviewer.js"></script>
+  <script src="js/app.js"></script>
+</body>
+
+</html>
