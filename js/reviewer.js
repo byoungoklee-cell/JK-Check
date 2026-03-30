@@ -139,7 +139,6 @@ const Reviewer = (() => {
     const isUnmatched = !jaText || !krEdit;
     const statusMeta = STATUS_META[status] ?? STATUS_META.none;
     const simOpen  = !_collapsedSim[i];
-    const isEditing = _editIdx === i;
 
     return `
     <div class="review-row ${status !== 'none' ? `status-${status}` : ''} ${isUnmatched ? 'unmatched' : ''}" data-idx="${i}">
@@ -158,25 +157,19 @@ const Reviewer = (() => {
       <div class="row-jp-cell">
         <div class="lang-badge-jp">JP</div>
         <div class="cell-text-jp ${!jaText ? 'cell-text-empty' : ''}">
-          ${highlightJaText(jaText, krEdit, scores)}
+          ${highlightText(jaText, krEdit, scores)}
         </div>
       </div>
 
       <!-- 한국어 번역문 -->
-      <div class="row-ko-cell" data-action="click-ko" data-idx="${i}">
+      <div class="row-ko-cell" data-idx="${i}">
         <div class="ko-cell-header">
           <span class="lang-badge-ko">KO</span>
           ${status !== 'none' ? `<span class="status-label-badge ${status}">${statusMeta.label}</span>` : ''}
         </div>
-        ${isEditing ? `
-          <textarea class="ko-edit-textarea" data-action="ko-edit" data-idx="${i}"
-                    autofocus>${esc(krEdit)}</textarea>
-        ` : `
-          <div class="cell-text-ko ${!krEdit ? 'cell-text-empty' : ''}">
-            ${krEdit ? esc(krEdit) : '（미매칭）'}
-            <span class="cell-edit-icon">✎</span>
-          </div>
-        `}
+        <div class="cell-text-ko ${!krEdit ? 'cell-text-empty' : ''}">
+          ${highlightText(krEdit, jaText, scores)}
+        </div>
         ${comment ? `<div class="memo-display" style="color:${statusMeta.text}">💬 ${esc(comment)}</div>` : ''}
         <input class="memo-input" type="text" placeholder="메모..."
                data-action="memo" data-idx="${i}"
@@ -249,25 +242,6 @@ const Reviewer = (() => {
       _collapsedSim[i] = !_collapsedSim[i];
       simCell.innerHTML = renderSimCell(_scores[i], i, !_collapsedSim[i]);
       return;
-    }
-
-    // KO 셀 클릭 → 편집 모드
-    const koCell = e.target.closest('[data-action="click-ko"]');
-    if (koCell && !e.target.closest('.memo-input') && !e.target.closest('.ko-edit-textarea')) {
-      const i = parseInt(koCell.dataset.idx);
-      if (_editIdx !== i) {
-        _editIdx = i;
-        render();
-        requestAnimationFrame(() => {
-          const ta = document.querySelector(`.ko-edit-textarea[data-idx="${i}"]`);
-          if (ta) { 
-            ta.focus(); 
-            ta.setSelectionRange(ta.value.length, ta.value.length); 
-            ta.style.height = 'auto';
-            ta.style.height = ta.scrollHeight + 'px';
-          }
-        });
-      }
     }
   }
 
@@ -404,7 +378,7 @@ const Reviewer = (() => {
     return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  function highlightJaText(text, krText, scores) {
+  function highlightText(text, otherText, scores) {
     if (!text) return '（미매칭）';
     if (!scores) return esc(text);
 
@@ -416,37 +390,58 @@ const Reviewer = (() => {
 
     const norm = window.Preprocessor ? window.Preprocessor.normChar : (c => c);
 
-    const krCounts = { num: {}, alpha: {}, sym: {} };
-    if (krText) {
-      for (const c of krText) {
-        const nc = norm(c);
-        if (/[0-9]/.test(nc)) krCounts.num[nc] = (krCounts.num[nc] || 0) + 1;
-        else if (/[A-Za-z]/.test(nc)) krCounts.alpha[nc] = (krCounts.alpha[nc] || 0) + 1;
-        else if ("!?@#$%^&*+=|~`\\\"';:,./<>(){}[]\\\\-_".indexOf(nc) !== -1) krCounts.sym[nc] = (krCounts.sym[nc] || 0) + 1;
+    function getUnmatchedIndicesSet(strA, strB, typeFn) {
+      const a = [], b = [];
+      for (let i = 0; i < strA.length; i++) if (typeFn(norm(strA[i]))) a.push({ c: norm(strA[i]), i });
+      for (let i = 0; i < (strB || '').length; i++) if (typeFn(norm(strB[i]))) b.push({ c: norm(strB[i]), i });
+
+      a.reverse();
+      b.reverse();
+
+      const table = Array(a.length + 1).fill(null).map(() => Array(b.length + 1).fill(0));
+      for (let i = 1; i <= a.length; i++) {
+        for (let j = 1; j <= b.length; j++) {
+          if (a[i - 1].c === b[j - 1].c) table[i][j] = table[i - 1][j - 1] + 1;
+          else table[i][j] = Math.max(table[i - 1][j], table[i][j - 1]);
+        }
       }
+
+      let i = a.length, j = b.length;
+      const matchedIndicesA = new Set();
+      while (i > 0 && j > 0) {
+        if (a[i - 1].c === b[j - 1].c) {
+          matchedIndicesA.add(a[i - 1].i);
+          i--; j--;
+        } else if (table[i - 1][j] > table[i][j - 1]) {
+          i--;
+        } else {
+          j--;
+        }
+      }
+
+      const unmatched = new Set();
+      for (const item of a) if (!matchedIndicesA.has(item.i)) unmatched.add(item.i);
+      return unmatched;
     }
+
+    const combinedUnmatched = getUnmatchedIndicesSet(text, otherText, c => {
+      return /[0-9A-Za-z]/.test(c) || "!?@#$%^&*+=|~`\\\"';:,./<>(){}[]\\\\-_".indexOf(c) !== -1;
+    });
 
     const colorNum   = 'rgba(14, 165, 233, 0.3)';
     const colorAlpha = 'rgba(16, 185, 129, 0.3)';
     const colorSym   = 'rgba(245, 158, 11, 0.3)';
 
     let html = '';
-
-    for (let c of text) {
-      const nc = norm(c);
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
       let bgColor = null;
 
-      if (isNumBad && /[0-9]/.test(nc)) {
-        if (krCounts.num[nc] > 0) krCounts.num[nc]--;
-        else bgColor = colorNum;
-      }
-      else if (isAlphaBad && /[A-Za-z]/.test(nc)) {
-        if (krCounts.alpha[nc] > 0) krCounts.alpha[nc]--;
-        else bgColor = colorAlpha;
-      }
-      else if (isSymBad && "!?@#$%^&*+=|~`\\\"';:,./<>(){}[]\\\\-_".indexOf(nc) !== -1) {
-        if (krCounts.sym[nc] > 0) krCounts.sym[nc]--;
-        else bgColor = colorSym;
+      if (combinedUnmatched.has(i)) {
+        const nc = norm(c);
+        if (isNumBad && /[0-9]/.test(nc)) bgColor = colorNum;
+        else if (isAlphaBad && /[A-Za-z]/.test(nc)) bgColor = colorAlpha;
+        else if (isSymBad && "!?@#$%^&*+=|~`\\\"';:,./<>(){}[]\\\\-_".indexOf(nc) !== -1) bgColor = colorSym;
       }
 
       const escaped = esc(c);
