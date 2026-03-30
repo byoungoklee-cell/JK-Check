@@ -158,7 +158,7 @@ const Reviewer = (() => {
       <div class="row-jp-cell">
         <div class="lang-badge-jp">JP</div>
         <div class="cell-text-jp ${!jaText ? 'cell-text-empty' : ''}">
-          ${jaText ? esc(jaText) : '（미매칭）'}
+          ${highlightJaText(jaText, krEdit, scores)}
         </div>
       </div>
 
@@ -213,20 +213,12 @@ const Reviewer = (() => {
                <span class="sim-value">${vPct}%</span>`}
         </div>`;
     }).join('');
-
-    const totalHtml = `
-      <div class="sim-total-row">
-        <span class="sim-label" style="font-weight:600;color:#374151">종합</span>
-        <div class="sim-bar-track thick"><div class="sim-bar-fill" style="width:${pct}%;background:${totalColor}"></div></div>
-        <span class="sim-value total" style="color:${totalColor}">${pct}%</span>
-      </div>`;
-
     return `
       <div class="sim-header-row">
         <span class="sim-badge ${badgeClass}">${pct}%</span>
         <span class="sim-toggle">${isOpen ? '▲' : '▼'}</span>
       </div>
-      ${isOpen ? `<div class="sim-panel">${detailHtml}${totalHtml}</div>` : ''}`;
+      ${isOpen ? `<div class="sim-panel">${detailHtml}</div>` : ''}`;
   }
 
   // ── 이벤트 바인딩 (위임) ──────────────────────────────────
@@ -410,6 +402,61 @@ const Reviewer = (() => {
   // ── 유틸 ──────────────────────────────────────────────────
   function esc(s) {
     return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function highlightJaText(text, krText, scores) {
+    if (!text) return '（미매칭）';
+    if (!scores) return esc(text);
+
+    const isNumBad   = scores.num !== null && Math.floor(scores.num * 100 + 0.0001) < 100;
+    const isAlphaBad = scores.alpha !== null && Math.floor(scores.alpha * 100 + 0.0001) < 100;
+    const isSymBad   = scores.sym !== null && Math.floor(scores.sym * 100 + 0.0001) < 100;
+
+    if (!isNumBad && !isAlphaBad && !isSymBad) return esc(text);
+
+    const norm = window.Preprocessor ? window.Preprocessor.normChar : (c => c);
+
+    const krCounts = { num: {}, alpha: {}, sym: {} };
+    if (krText) {
+      for (const c of krText) {
+        const nc = norm(c);
+        if (/[0-9]/.test(nc)) krCounts.num[nc] = (krCounts.num[nc] || 0) + 1;
+        else if (/[A-Za-z]/.test(nc)) krCounts.alpha[nc] = (krCounts.alpha[nc] || 0) + 1;
+        else if ("!?@#$%^&*+=|~`\\\"';:,./<>(){}[]\\\\-_".indexOf(nc) !== -1) krCounts.sym[nc] = (krCounts.sym[nc] || 0) + 1;
+      }
+    }
+
+    const colorNum   = 'rgba(14, 165, 233, 0.3)';
+    const colorAlpha = 'rgba(16, 185, 129, 0.3)';
+    const colorSym   = 'rgba(245, 158, 11, 0.3)';
+
+    let html = '';
+
+    for (let c of text) {
+      const nc = norm(c);
+      let bgColor = null;
+
+      if (isNumBad && /[0-9]/.test(nc)) {
+        if (krCounts.num[nc] > 0) krCounts.num[nc]--;
+        else bgColor = colorNum;
+      }
+      else if (isAlphaBad && /[A-Za-z]/.test(nc)) {
+        if (krCounts.alpha[nc] > 0) krCounts.alpha[nc]--;
+        else bgColor = colorAlpha;
+      }
+      else if (isSymBad && "!?@#$%^&*+=|~`\\\"';:,./<>(){}[]\\\\-_".indexOf(nc) !== -1) {
+        if (krCounts.sym[nc] > 0) krCounts.sym[nc]--;
+        else bgColor = colorSym;
+      }
+
+      const escaped = esc(c);
+      if (bgColor) {
+        html += `<span style="background-color: ${bgColor}; padding: 0 1px; border-radius: 2px; font-weight: bold; color: #1f2937;">${escaped}</span>`;
+      } else {
+        html += escaped;
+      }
+    }
+    return html;
   }
 
   return { init, onFilter, toggleSort, downloadTranslation };
