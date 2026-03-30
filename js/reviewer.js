@@ -455,12 +455,18 @@ const Reviewer = (() => {
       const newXmlStr = serializer.serializeToString(xmlDoc);
       zip.file("word/document.xml", newXmlStr);
 
-      // 4. 새로운 DOCX 생성 및 다운로드 (원본 서식 그대로 유지)
+      // 4. 새로운 DOCX 생성 및 다운로드
+      const originalName = krFile.name || '번역본.docx';
+      
+      const now = new Date();
+      const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+      const downloadName = `(검토본 ${ts}) ${originalName}`;
+      
       const blob = await zip.generateAsync({ type: "blob" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = '번역문_수정본.docx';
+      a.download = downloadName;
       a.click();
       URL.revokeObjectURL(url);
 
@@ -472,11 +478,18 @@ const Reviewer = (() => {
   }
 
   function downloadTxt() {
+    const krFile = (typeof App !== 'undefined') ? App.getKrFile() : null;
+    const baseName = krFile ? krFile.name.replace(/\.[^/.]+$/, "") : "번역본";
+
+    const now = new Date();
+    const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+    const downloadName = `(검토본 ${ts}) ${baseName}.txt`;
+
     const text = _krTexts.filter(s => s && s.length > 0).join('\n');
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = '번역문_수정본.txt'; a.click();
+    a.href = url; a.download = downloadName; a.click();
     URL.revokeObjectURL(url);
   }
 

@@ -13,9 +13,9 @@
 
     <!-- ===== 헤더 ===== -->
     <header class="app-header">
-      <div class="logo-icon">J</div>
+      <div class="logo-icon">JK</div>
       <div class="logo-text">
-        <h1>일한 번역검토</h1>
+        <h1>일한 번역 검토</h1>
         <div class="subtitle">JP→KO Translation Review</div>
       </div>
       <div class="header-actions" id="header-actions" style="display:none;">
@@ -23,7 +23,7 @@
           <div class="header-progress-fill" id="header-progress-fill" style="width:0%"></div>
         </div>
         <span class="header-pct" id="header-pct">0%</span>
-        <button class="btn-header-dl" id="btn-dl">⬇ 현재의 번역문 다운로드</button>
+        <button class="btn-header-dl" id="btn-dl">⬇ 수정 번역본 다운로드</button>
         <button class="btn-header-new" id="btn-new">↩ 새 파일</button>
       </div>
     </header>
@@ -63,6 +63,41 @@
           <button class="btn-start disabled" id="btn-start" disabled>
             두 파일을 모두 업로드해 주세요
           </button>
+        </div>
+
+        <!-- 이용 방법 안내 추가 -->
+        <div class="info-card">
+          <div class="info-card-title">이용 방법</div>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-num">1</span>
+              <div>
+                <div class="info-item-title">파일 업로드</div>
+                <div class="info-item-desc">비교할 일/한 Word(.docx) 문서를 각각 업로드해 주세요.</div>
+              </div>
+            </div>
+            <div class="info-item">
+              <span class="info-num">2</span>
+              <div>
+                <div class="info-item-title">유사도 검토</div>
+                <div class="info-item-desc">숫자, 알파벳, 기호 일치 여부를 기반으로 번역 오류를 찾아냅니다.</div>
+              </div>
+            </div>
+            <div class="info-item">
+              <span class="info-num">3</span>
+              <div>
+                <div class="info-item-title">실시간 수정</div>
+                <div class="info-item-desc">번역문을 더블클릭하여 수정하고 즉시 유사도를 재계산할 수 있습니다.</div>
+              </div>
+            </div>
+            <div class="info-item">
+              <span class="info-num">4</span>
+              <div>
+                <div class="info-item-title">최종 다운로드</div>
+                <div class="info-item-desc">검토 및 수정이 완료된 내용을 새로운 Word 문서로 저장합니다.</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
