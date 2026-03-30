@@ -84,9 +84,10 @@ const Similarity = (() => {
     const numVal   = seqSimilarity(extractNums(jp),  extractNums(kr));
     const alphaVal = seqSimilarity(extractAlpha(jp), extractAlpha(kr));
     const symVal   = seqSimilarity(extractSyms(jp),  extractSyms(kr));
-    const pos      = Math.max(0, 1 - Math.abs(
+    let pos        = Math.max(0, 1 - Math.abs(
       (jn > 1 ? ji / (jn - 1) : 0) - (kn > 1 ? ki / (kn - 1) : 0)
     ) * 3);
+    if (pos >= 0.95) pos = 1.0;
 
     const total = Math.max(0, Math.min(1,
       len * 0.25 +
