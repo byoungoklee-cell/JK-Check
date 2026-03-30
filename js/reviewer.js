@@ -221,6 +221,7 @@ const Reviewer = (() => {
   let _modalBound = false;
   function bindRowEvents(listEl) {
     listEl.addEventListener('click', handleRowClick);
+    listEl.addEventListener('dblclick', handleDblClick);
     listEl.addEventListener('blur',  handleBlur,  true);
     listEl.addEventListener('input', handleInput, true);
 
@@ -264,16 +265,36 @@ const Reviewer = (() => {
     }
   }
 
+  function handleDblClick(e) {
+    const koCell = e.target.closest('.row-ko-cell');
+    if (koCell) {
+      const i = parseInt(koCell.dataset.idx);
+      openEditModal(i);
+    }
+  }
+
   // ── 수정 모달 제어 ─────────────────────────────────────────
   function openEditModal(idx) {
     _editIdx = idx;
     const jaText = _pairs[idx].jaText || _pairs[idx].jp || '';
     const koText = _krTexts[idx] || '';
 
+    // 너비 맞추기 (선택사항: 번역문 컬럼 폭과 동일하게)
+    const rowEl = document.querySelector(`.review-row[data-idx="${idx}"]`);
+    const koCell = rowEl?.querySelector('.row-ko-cell');
+    const modalShowingWidth = koCell ? koCell.offsetWidth : 600;
+
+    const modalBtn = document.getElementById('edit-modal');
+    const modalCard = modalBtn.querySelector('.modal-card');
+    if (modalCard) {
+      modalCard.style.width = `${modalShowingWidth}px`;
+      modalCard.style.maxWidth = 'none'; // 고정폭 해제
+    }
+
     document.getElementById('modal-jp-text').textContent = jaText;
     document.getElementById('modal-ko-text').textContent = koText;
     document.getElementById('modal-edit-area').value    = koText;
-    document.getElementById('edit-modal').style.display = 'flex';
+    modalBtn.style.display = 'flex';
   }
 
   function closeEditModal() {
