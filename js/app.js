@@ -357,7 +357,8 @@ const App = (() => {
 
   // ── 외부에서 statuses/krTexts 업데이트 ───────────────────
   function setRowStatus(idx, s) { statuses[idx] = s; }
-  function setRowKrText(idx, v) { krTexts[idx] = v; }
+  function setRowKoText(idx, v) { krTexts[idx] = v; }
+  function setRowScores(idx, v) { simScores[idx] = v; }
   function setRowComment(idx, v) { comments[idx] = v; }
 
   function getProgress() {
@@ -376,7 +377,7 @@ const App = (() => {
 
   return {
     init,
-    setRowStatus, setRowKrText, setRowComment,
+    setRowStatus, setRowKoText, setRowScores, setRowComment,
     updateHeaderProgress,
     getStatuses: () => statuses,
     getKrTexts:  () => krTexts,

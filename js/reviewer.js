@@ -165,6 +165,9 @@ const Reviewer = (() => {
       <div class="row-ko-cell" data-idx="${i}">
         <div class="ko-cell-header">
           <span class="lang-badge-ko">KO</span>
+          <button class="btn-edit-ko" data-action="edit-ko" data-idx="${i}">
+            <span style="font-size:10px;">✏️</span> 수정
+          </button>
           ${status !== 'none' ? `<span class="status-label-badge ${status}">${statusMeta.label}</span>` : ''}
         </div>
         <div class="cell-text-ko ${!krEdit ? 'cell-text-empty' : ''}">
@@ -215,10 +218,19 @@ const Reviewer = (() => {
   }
 
   // ── 이벤트 바인딩 (위임) ──────────────────────────────────
+  let _modalBound = false;
   function bindRowEvents(listEl) {
     listEl.addEventListener('click', handleRowClick);
     listEl.addEventListener('blur',  handleBlur,  true);
     listEl.addEventListener('input', handleInput, true);
+
+    if (!_modalBound) {
+      document.querySelectorAll('[data-action="close-modal"]').forEach(el => {
+        el.onclick = closeEditModal;
+      });
+      document.getElementById('btn-modal-save').onclick = saveEdit;
+      _modalBound = true;
+    }
   }
 
   function handleRowClick(e) {
@@ -228,14 +240,21 @@ const Reviewer = (() => {
       const i = parseInt(statusBtn.dataset.idx);
       const newStatus = statusBtn.dataset.status;
       _statuses[i] = _statuses[i] === newStatus ? 'none' : newStatus;
-      // App에도 동기화
       if (typeof App !== 'undefined') App.setRowStatus(i, _statuses[i]);
       updateFilters();
       render();
       return;
     }
 
-    // 유사도 토글 (해당 셀만 갱신)
+    // 수정 버튼 클릭
+    const editBtn = e.target.closest('[data-action="edit-ko"]');
+    if (editBtn) {
+      const i = parseInt(editBtn.dataset.idx);
+      openEditModal(i);
+      return;
+    }
+
+    // 유사도 토글
     const simCell = e.target.closest('[data-action="toggle-sim"]');
     if (simCell) {
       const i = parseInt(simCell.dataset.idx);
@@ -243,6 +262,52 @@ const Reviewer = (() => {
       simCell.innerHTML = renderSimCell(_scores[i], i, !_collapsedSim[i]);
       return;
     }
+  }
+
+  // ── 수정 모달 제어 ─────────────────────────────────────────
+  function openEditModal(idx) {
+    _editIdx = idx;
+    const jaText = _pairs[idx].jaText || _pairs[idx].jp || '';
+    const koText = _krTexts[idx] || '';
+
+    document.getElementById('modal-jp-text').textContent = jaText;
+    document.getElementById('modal-ko-text').textContent = koText;
+    document.getElementById('modal-edit-area').value    = koText;
+    document.getElementById('edit-modal').style.display = 'flex';
+  }
+
+  function closeEditModal() {
+    document.getElementById('edit-modal').style.display = 'none';
+    _editIdx = null;
+  }
+
+  function saveEdit() {
+    if (_editIdx === null) return;
+    const newText = document.getElementById('modal-edit-area').value;
+    const i = _editIdx;
+
+    // 데이터 업데이트
+    _krTexts[i] = newText;
+    if (typeof App !== 'undefined') App.setRowKoText(i, newText);
+
+    // 유사도 재계산
+    if (window.Similarity && _matchInfo) {
+      const p = _pairs[i];
+      const s = Similarity.calculate(p.jaText, newText, p.jaIdx, _matchInfo.jp, p.koIdx, _matchInfo.kr);
+      _scores[i] = {
+        len:   s.details.length?.value  ?? 0,
+        num:   s.details.number?.isNA   ? null : (s.details.number?.value  ?? null),
+        alpha: s.details.alphabet?.isNA ? null : (s.details.alphabet?.value ?? null),
+        sym:   s.details.symbol?.isNA   ? null : (s.details.symbol?.value  ?? null),
+        pos:   s.details.position?.value ?? 0,
+        total: s.overall,
+      };
+      if (typeof App !== 'undefined') App.setRowScores(i, _scores[i]);
+    }
+
+    closeEditModal();
+    updateFilters();
+    render();
   }
 
   function handleBlur(e) {

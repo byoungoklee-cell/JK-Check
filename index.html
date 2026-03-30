@@ -112,7 +112,33 @@
         <div id="review-list"></div>
       </div>
     </div>
-
+    <!-- 번역 수정 모달 -->
+    <div class="modal-overlay" id="edit-modal" style="display:none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title">번역문 수정</h3>
+          <button class="modal-close" data-action="close-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-row">
+            <label class="modal-label">원문 (🇯🇵)</label>
+            <div class="modal-text-jp" id="modal-jp-text"></div>
+          </div>
+          <div class="modal-row">
+            <label class="modal-label">기존 번역문 (🇰🇷)</label>
+            <div class="modal-text-ko" id="modal-ko-text"></div>
+          </div>
+          <div class="modal-row">
+            <label class="modal-label">수정할 번역문</label>
+            <textarea class="modal-textarea" id="modal-edit-area" placeholder="번역문을 수정해 주세요..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-modal-cancel" data-action="close-modal">취소</button>
+          <button class="btn-modal-confirm" id="btn-modal-save">수정 확인</button>
+        </div>
+      </div>
+    </div>
   </div><!-- #app -->
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.11.0/mammoth.browser.min.js"></script>
