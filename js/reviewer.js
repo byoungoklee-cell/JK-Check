@@ -388,45 +388,66 @@ const Reviewer = (() => {
 
       // 2. 편집된 문장을 원본 인덱스(koIdx) 기준으로 맵핑
       const editsByKoIdx = {};
+      const commentsByKoIdx = {};
       _pairs.forEach((p, i) => {
         if (p.koIdx !== -1) {
-          editsByKoIdx[p.koIdx] = _krTexts[i] || ''; // 빈 문자 배열 처리
+          editsByKoIdx[p.koIdx]    = _krTexts[i] || '';
+          commentsByKoIdx[p.koIdx] = _comments[i] || '';
         }
       });
 
-      let currentKoIdx = 0; // 추출 시 사용했던 순차 인덱스와 일치시킴
+      let currentKoIdx = 0;
 
       for (let i = 0; i < wps.length; i++) {
         const p = wps[i];
         let fullText = '';
         const wts = Array.from(p.getElementsByTagName('w:t'));
+        if (wts.length === 0) continue; // 텍스트가 없는 단락 패스
+
         for (let t of wts) fullText += t.textContent;
-
         const textTrim = fullText.trim();
-        if (!textTrim) continue; // 빈 줄은 패스 (mammoth 동작 방식과 일치)
-
-        // 태그 라인인지 확인 (전처리 단계에서 무시된 단락은 건너뜀 - 단락 번호 등 보존)
+        if (!textTrim) continue;
         if (window.Preprocessor.isTagLine(fullText)) continue;
 
-        // 이 단락은 currentKoIdx의 원본 문장에 해당함
         const edit = editsByKoIdx[currentKoIdx];
         if (edit !== undefined) {
-          // 단락 맨 앞의 문서 기호(예: 【０００１】)가 있다면 유지하고 본문만 교체
           const match = fullText.match(/^(【[０-９0-9\s]+】|〔[^〕]*〕)/);
           const prefix = match ? match[0] + ' ' : '';
           const newFullText = prefix + edit;
 
-          // 단락 안의 텍스트 노드(<w:t>)들을 새 텍스트로 치환
-          if (wts.length > 0) {
-            wts[0].textContent = newFullText;
-            wts[0].setAttribute('xml:space', 'preserve'); // 들여쓰기/띄어쓰기 유지
-            // 텍스트 조각 제거
-            for (let j = 1; j < wts.length; j++) {
-              wts[j].parentNode.removeChild(wts[j]);
-            }
+          // 1. 첫 번째 텍스트 노드에 수정된 번역문 반영
+          wts[0].textContent = newFullText;
+          wts[0].setAttribute('xml:space', 'preserve');
+          for (let j = 1; j < wts.length; j++) {
+            wts[j].parentNode.removeChild(wts[j]);
+          }
+
+          // 2. 메모가 있다면 노란색 배경(하이라이트) + 이탤릭체로 추가
+          const memo = commentsByKoIdx[currentKoIdx];
+          if (memo) {
+            const rNode = xmlDoc.createElement("w:r");
+            const rPrNode = xmlDoc.createElement("w:rPr");
+            
+            // 노란색 하이라이트 배경색 적용
+            const highlightNode = xmlDoc.createElement("w:highlight");
+            highlightNode.setAttribute("w:val", "yellow");
+            rPrNode.appendChild(highlightNode);
+
+            // 이탤릭체 적용
+            const italicNode = xmlDoc.createElement("w:i");
+            rPrNode.appendChild(italicNode);
+
+            rNode.appendChild(rPrNode);
+
+            const tNode = xmlDoc.createElement("w:t");
+            tNode.setAttribute("xml:space", "preserve");
+            tNode.textContent = ` (메모: ${memo})`;
+            rNode.appendChild(tNode);
+
+            p.appendChild(rNode);
           }
         }
-        currentKoIdx++; // 유효한 문장이었으므로 인덱스 증가
+        currentKoIdx++;
       }
 
       // 3. 수정된 XML 저장
