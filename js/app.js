@@ -75,14 +75,24 @@ const App = (() => {
     // JP
     const inputJp = document.getElementById('input-jp');
     const dropJp  = document.getElementById('drop-jp');
-    if (inputJp) inputJp.addEventListener('change', e => setFile('jp', e.target.files[0]));
-    if (dropJp)  setupDrop(dropJp, f => setFile('jp', f));
+    if (inputJp) {
+        inputJp.addEventListener('change', e => {
+            if (e.target.files[0]) setFile('jp', e.target.files[0]);
+            e.target.value = ''; // 동일 파일 재업로드 가능하게 초기화
+        });
+    }
+    if (dropJp) setupDrop(dropJp, f => setFile('jp', f));
 
     // KO
     const inputKo = document.getElementById('input-ko');
     const dropKo  = document.getElementById('drop-ko');
-    if (inputKo) inputKo.addEventListener('change', e => setFile('kr', e.target.files[0]));
-    if (dropKo)  setupDrop(dropKo, f => setFile('kr', f));
+    if (inputKo) {
+        inputKo.addEventListener('change', e => {
+            if (e.target.files[0]) setFile('ko', e.target.files[0]);
+            e.target.value = '';
+        });
+    }
+    if (dropKo) setupDrop(dropKo, f => setFile('ko', f));
 
     // 시작 버튼
     const btn = document.getElementById('btn-start');
@@ -90,27 +100,45 @@ const App = (() => {
   }
 
   function setupDrop(zone, onFile) {
-    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
-    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    ['dragenter', 'dragover'].forEach(name => {
+        zone.addEventListener(name, e => {
+            e.preventDefault();
+            e.stopPropagation();
+            zone.classList.add('drag-over');
+        });
+    });
+    ['dragleave', 'drop'].forEach(name => {
+        zone.addEventListener(name, e => {
+            e.preventDefault();
+            e.stopPropagation();
+            zone.classList.remove('drag-over');
+        });
+    });
     zone.addEventListener('drop', e => {
-      e.preventDefault();
-      zone.classList.remove('drag-over');
       if (e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]);
     });
   }
 
   function setFile(lang, file) {
-    if (!file || !file.name.endsWith('.docx')) {
-      showError('.docx 파일만 업로드할 수 있습니다.');
-      return;
-    }
+    if (!file) return;
+    const isDocx = file.name.toLowerCase().endsWith('.docx');
+    const isPdf  = file.name.toLowerCase().endsWith('.pdf');
+
     if (lang === 'jp') {
+      if (!isDocx && !isPdf) {
+        showError('.docx 또는 .pdf 파일만 업로드할 수 있습니다.');
+        return;
+      }
       jpFile = file;
-      updateDropZone('jp', file);
     } else {
+      if (!isDocx) {
+        showError('번역문은 .docx 파일만 가능합니다.');
+        return;
+      }
       krFile = file;
-      updateDropZone('ko', file);
     }
+    showError(''); // 에러 메시지 초기화
+    updateDropZone(lang, file);
     updateStartButton();
   }
 
@@ -138,14 +166,14 @@ const App = (() => {
         e.stopPropagation();
         if (lang === 'jp') jpFile = null;
         else krFile = null;
-        info.innerHTML = `<div class="file-drop-hint">.docx 클릭하여 업로드</div>`;
+        info.innerHTML = `<div class="file-drop-hint">${lang === 'jp' ? '.docx, .pdf' : '.docx'} 클릭하여 업로드</div>`;
         zone.classList.remove(`has-file-${lang}`);
         clearBtn.remove();
         updateStartButton();
       });
       zone.appendChild(clearBtn);
     } else {
-      info.innerHTML = `<div class="file-drop-hint">.docx 클릭하여 업로드</div>`;
+      info.innerHTML = `<div class="file-drop-hint">${lang === 'jp' ? '.docx, .pdf' : '.docx'} 클릭하여 업로드</div>`;
     }
   }
 
@@ -177,8 +205,8 @@ const App = (() => {
 
       // 파일 → 텍스트 추출
       const [jpRaw, krRaw] = await Promise.all([
-        extractDocx(jpFile),
-        extractDocx(krFile),
+        extractText(jpFile),
+        extractText(krFile),
       ]);
       addLog(`JP ${jpRaw.length}자 / KR ${krRaw.length}자`);
 
@@ -262,6 +290,14 @@ const App = (() => {
     }
   }
 
+  // ── 텍스트 추출 통합 ──────────────────────────────────────
+  async function extractText(file) {
+    if (!file) return '';
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'pdf') return extractPdf(file);
+    return extractDocx(file);
+  }
+
   // ── docx 텍스트 추출 ──────────────────────────────────────
   async function extractDocx(file) {
     const buf = await file.arrayBuffer();
@@ -279,6 +315,76 @@ const App = (() => {
     // fallback: raw text
     const raw = await mammoth.extractRawText({ arrayBuffer: buf });
     return raw.value.trim();
+  }
+
+  // ── pdf 텍스트 추출 ───────────────────────────────────────
+  async function extractPdf(file) {
+    const buf = await file.arrayBuffer();
+    
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    const loadingTask = pdfjsLib.getDocument({ data: buf });
+    const pdf = await loadingTask.promise;
+    let paragraphs = [];
+    let currentPara = "";
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const items = content.items;
+
+        if (items.length === 0) continue;
+
+        // 1. Y 좌표(높이)를 기준으로 행(Line) 그룹화
+        // transform[5]가 Y좌표임 (PDF는 아래에서 위로 증가하므로 내림차순 정렬 필요)
+        const linesMap = new Map();
+        items.forEach(item => {
+            const y = Math.round(item.transform[5]);
+            if (!linesMap.has(y)) linesMap.set(y, []);
+            linesMap.get(y).push(item);
+        });
+
+        // Y값 내림차순 정렬 (위에서 아래로)
+        const sortedY = [...linesMap.keys()].sort((a, b) => b - a);
+
+        sortedY.forEach((y, idx) => {
+            const lineItems = linesMap.get(y).sort((a, b) => a.transform[4] - b.transform[4]); // X좌표순
+            const lineText = lineItems.map(it => it.str).join('').trim();
+            if (!lineText) return;
+
+            // 2. 단락 시작 판별 (번호 시작 태그 【 】 등)
+            const isNewParaStart = /^【[０-９0-9\s]+】/.test(lineText) || /^[0-9]+[.\s]/.test(lineText);
+            
+            // 3. 이전 행과의 연결성 확인
+            // 일본어/한국어의 경우 마침표(。.)로 끝나지 않으면 다음 줄과 이어질 가능성이 높음
+            const lastChar = currentPara.slice(-1);
+            const isSentenceEnd = /[。.!?]$/.test(currentPara.trim());
+
+            if (isNewParaStart && currentPara) {
+                paragraphs.push(currentPara.trim());
+                currentPara = lineText;
+            } else if (!currentPara) {
+                currentPara = lineText;
+            } else {
+                // 문장이 끝나지 않았거나 태그가 아니면 이어붙임 (공백 없이)
+                currentPara += lineText;
+            }
+
+            // 큰 간격이 있으면 단락으로 간주 (단순화: 다음 줄이 너무 멀면 끊음)
+            if (idx < sortedY.length - 1) {
+                const nextY = sortedY[idx + 1];
+                if (Math.abs(y - nextY) > 25) { // 줄 간격이 25pt 이상이면 새 단락
+                    paragraphs.push(currentPara.trim());
+                    currentPara = "";
+                }
+            }
+        });
+    }
+    if (currentPara) paragraphs.push(currentPara.trim());
+
+    return paragraphs.filter(p => p.length > 0).join('\n');
   }
 
   // ── 헤더 버튼 ─────────────────────────────────────────────

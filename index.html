@@ -43,10 +43,10 @@
           <div class="file-drop-row">
             <!-- JP -->
             <div class="file-drop-zone" id="drop-jp" onclick="document.getElementById('input-jp').click()">
-              <input type="file" id="input-jp" accept=".docx" style="display:none">
+              <input type="file" id="input-jp" accept=".docx,.pdf" style="display:none">
               <div class="file-drop-flag">🇯🇵</div>
               <div class="file-drop-lang">일본어 원문</div>
-              <div id="drop-jp-info" class="file-drop-hint">.docx 클릭하여 업로드</div>
+              <div id="drop-jp-info" class="file-drop-hint">.docx, .pdf 클릭하여 업로드</div>
             </div>
             <!-- KO -->
             <div class="file-drop-zone" id="drop-ko" onclick="document.getElementById('input-ko').click()">
@@ -178,6 +178,7 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.11.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="js/similarity.js"></script>
   <script src="js/preprocessor.js"></script>
   <script src="js/matcher.js"></script>
