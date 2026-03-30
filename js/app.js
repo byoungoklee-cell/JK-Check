@@ -171,6 +171,7 @@ const App = (() => {
     const logEl    = document.getElementById('proc-log');
 
     try {
+      setProgress(10);
       setStatus('파일을 읽고 있습니다...');
       addLog('파일 읽기 시작...');
 
@@ -181,11 +182,13 @@ const App = (() => {
       ]);
       addLog(`JP ${jpRaw.length}자 / KR ${krRaw.length}자`);
 
+      setProgress(40);
       // 전처리
       const jpSents = Preprocessor.extractSentences(jpRaw);
       const krSents = Preprocessor.extractSentences(krRaw);
       addLog(`JP ${jpSents.length}문장 / KR ${krSents.length}문장`);
 
+      setProgress(60);
       setStatus('문장을 매칭하고 있습니다...');
       await sleep(80);
 
@@ -194,6 +197,7 @@ const App = (() => {
       const matched = Matcher.buildDisplayRows(matchResult);
       addLog(`매칭 ${matchResult.pairs.length}쌍 완료`);
 
+      setProgress(80);
       // 유사도 계산
       setStatus('유사도를 계산하고 있습니다...');
       const scores = matched.map(row => {
@@ -227,6 +231,7 @@ const App = (() => {
       };
 
       addLog(`총 ${matched.length}행 완료`);
+      setProgress(100);
       setStatus('처리 완료!');
 
       // 매칭 완료 후 약간의 대기 후 자동으로 검토 화면으로 전환
@@ -242,6 +247,10 @@ const App = (() => {
       loading = false;
     }
 
+    function setProgress(pct) {
+      const fillEl = document.getElementById('proc-progress-fill');
+      if (fillEl) fillEl.style.width = pct + '%';
+    }
     function setStatus(msg) { if (statusEl) statusEl.textContent = msg; }
     function addLog(msg) {
       if (!logEl) return;
